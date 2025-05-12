@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Doações - Igreja</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <form id="form">
+        <input type="text" placeholder="Nome" name="nome" required>
+        <input type="text" placeholder="Documento (CPF)" name="documento" required>
+        <input type="text" placeholder="Telefone" name="telefone" required>
+        <input type="number" placeholder="Valor (em centavos)" name="valor" required>
+        <select name="formaPagamento">
+            <option>Cartão de Crédito</option>
+            <option>Boleto</option>
+        </select>
+        <input type="text" placeholder="Número do Cartão" name="numeroCartao">
+        <input type="text" placeholder="Mês" name="mes">
+        <input type="text" placeholder="Ano" name="ano">
+        <input type="text" placeholder="CVV" name="cvv">
+        <input type="text" placeholder="Nome Impresso" name="nomeImpresso">
+        <button type="submit">Doar</button>
+    </form>
+    <script src="script.js"></script>
+</body>
+</html>
