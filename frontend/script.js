@@ -2,7 +2,7 @@ document.getElementById('form').addEventListener('submit', async function(e) {
     e.preventDefault();
     const data = Object.fromEntries(new FormData(this).entries());
     try {
-        const response = await fetch('http://localhost:3000/doar', {
+        const response = await fetch('https://igreja-doacoes.onrender.com/doar', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
