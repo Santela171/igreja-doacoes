@@ -1,65 +1,94 @@
 const express = require('express');
 const cors = require('cors');
-const axios = require('axios');
-require('dotenv').config();
+const bodyParser = require('body-parser');
+const pagarme = require('pagarme');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(bodyParser.json());
+
+const PORT = process.env.PORT || 3000;
+const API_KEY = process.env.PAGARME_API_KEY; // vem do .env
 
 app.post('/doar', async (req, res) => {
-    try {
-        const { nome, documento, telefone, valor, formaPagamento, numeroCartao, mes, ano, cvv, nomeImpresso } = req.body;
+  const {
+    nome,
+    email,
+    cpf,
+    telefone,
+    valor,
+    numero_cartao,
+    cvv,
+    validade,
+    metodo_pagamento
+  } = req.body;
 
-        const response = await axios.post('https://api.pagar.me/core/v5/orders', {
-            customer: {
-                name: nome,
-                document: documento,
-                phones: {
-                    mobile_phone: {
-                        country_code: "55",
-                        area_code: telefone.slice(1, 3),
-                        number: telefone.replace(/\D/g, '').slice(3)
-                    }
-                }
-            },
-            items: [
-                {
-                    amount: parseInt(valor),
-                    description: "Doação para igreja",
-                    quantity: 1,
-                    code: "doacao-igreja"
-                }
-            ],
-            payments: [
-                {
-                    payment_method: formaPagamento === 'Cartão de Crédito' ? "credit_card" : "boleto",
-                    credit_card: formaPagamento === 'Cartão de Crédito' ? {
-                        card: {
-                            number: numeroCartao,
-                            exp_month: mes,
-                            exp_year: ano,
-                            cvv: cvv,
-                            holder: {
-                                name: nomeImpresso
-                            }
-                        }
-                    } : undefined
-                }
-            ]
-        }, {
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Basic ${Buffer.from(process.env.PAGARME_API_KEY + ':').toString('base64')}`
-            }
-        });
+  const [mes, ano] = validade.split('/');
 
-        res.json(response.data);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+  try {
+    const client = await pagarme.client.connect({ api_key: API_KEY });
+
+    const transaction = await client.transactions.create({
+      amount: parseInt(valor) * 100,
+      payment_method: metodo_pagamento, // 'credit_card' ou 'debit_card'
+      card_number: numero_cartao,
+      card_cvv: cvv,
+      card_expiration_date: `${mes}${ano}`,
+      card_holder_name: nome,
+      customer: {
+        external_id: cpf,
+        name: nome,
+        type: 'individual',
+        country: 'br',
+        email: email,
+        documents: [
+          {
+            type: 'cpf',
+            number: cpf
+          }
+        ],
+        phone_numbers: [`+55${telefone}`]
+      },
+      billing: {
+        name: nome,
+        address: {
+          country: 'br',
+          state: 'SP',
+          city: 'São Paulo',
+          neighborhood: 'Centro',
+          street: 'Rua Fictícia',
+          street_number: '123',
+          zipcode: '01000-000'
+        }
+      },
+      items: [
+        {
+          id: '1',
+          title: 'Doação para igreja',
+          unit_price: parseInt(valor) * 100,
+          quantity: 1,
+          tangible: false
+        }
+      ]
+    });
+
+    if (transaction.status === 'paid') {
+      res.json({ sucesso: true, mensagem: 'Obrigado pela doação!' });
+    } else {
+      res.json({ sucesso: false, mensagem: 'Pagamento não autorizado.', detalhe: transaction.status });
     }
+  } catch (erro) {
+    let mensagemErro = 'Erro desconhecido';
+    if (erro.response && erro.response.errors) {
+      mensagemErro = erro.response.errors.map(e => e.message).join('; ');
+    } else if (erro.message) {
+      mensagemErro = erro.message;
+    }
+
+    res.json({ sucesso: false, mensagem: mensagemErro });
+  }
 });
 
-app.listen(3000, () => {
-    console.log('Servidor rodando na porta 3000');
+app.listen(PORT, () => {
+  console.log(`Servidor rodando na porta ${PORT}`);
 });
